@@ -12,8 +12,8 @@ Options:
   -a --anonymize                 Make a sample anonymous scorecard.
   -d --debug                     Keep intermediate files for debugging.
   -f --final                     Remove draft watermark.
-  -h --help                      Show this screen.           
-  -p --previous=SCORECARD_ID     Generate a previous scorecard. 
+  -h --help                      Show this screen.
+  -p --previous=SCORECARD_ID     Generate a previous scorecard.
   -s SECTION --section=SECTION   Configuration section to use.
   -t --title-date=YYYYMMDD       Change the title page date.
   --version                      Show version.
@@ -38,9 +38,9 @@ import random
 # third-party libraries (install with pip)
 import dateutil
 import pystache
-from pandas import Series, DataFrame 
+from pandas import Series, DataFrame
 import pandas as pd
-import numpy as np 
+import numpy as np
 from bson import ObjectId
 from docopt import docopt
 from pyPdf import PdfFileWriter, PdfFileReader
@@ -111,7 +111,7 @@ class ScorecardGenerator(object):
         self.__results = dict() # reusable query results
         self.__requests = None
         self.__tallies = []
-        self.__debug = debug 
+        self.__debug = debug
         self.__title_date = title_date
         self.__draft = not final
         self.__anonymize = anonymize
@@ -122,12 +122,12 @@ class ScorecardGenerator(object):
         self.__low_risk_orgs = []
         self.__not_scanned_orgs = []
         self.__all_scanned_orgs = []
-    
-    def __run_queries(self):        
+
+    def __run_queries(self):
         fed_executive_orgs = self.__db.RequestDoc.find_one({'_id':'EXECUTIVE'})['children']
         # Get request docs for all FEDERAL EXECUTIVE orgs, except those in EXEMPT_ORGS list
         self.__requests = list(self.__db.RequestDoc.find({'_id':{'$in':fed_executive_orgs, '$nin':EXEMPT_ORGS}}))
-        
+
         # Build up list of FED EXECUTIVE tallies updated within past CURRENTLY_SCANNED_DAYS days
         for tally in list(self.__db.TallyDoc.find({'_id':{'$in':fed_executive_orgs, '$nin':EXEMPT_ORGS}})):
             if tally['last_change'] >= self.__generated_time - timedelta(days=CURRENTLY_SCANNED_DAYS):
@@ -149,23 +149,23 @@ class ScorecardGenerator(object):
                 #all_descendants += r['children']
                 orgs_with_descendants.append(r['_id'])
                 requests_with_descendants.append(r)
-                        
+
         # Get relevant ticket age data
         pipeline_collection = queries.open_ticket_age_pl(self.__generated_time)
         self.__results['open_ticket_age'] = database.run_pipeline_cursor(pipeline_collection, self.__db)
         pipeline_collection = queries.closed_ticket_age_pl(self.__generated_time - timedelta(days=CLOSED_TICKETS_DAYS))
         self.__results['closed_ticket_age'] = database.run_pipeline_cursor(pipeline_collection, self.__db)
-        
+
         # Throw out ticket data from orgs with descendants
         # list(<ticket_data>) iterates over a *copy* of the list so items can be properly removed from the original
         for r in list(self.__results['open_ticket_age']):
             if r['_id']['owner'] in orgs_with_descendants:
                 self.__results['open_ticket_age'].remove(r)
-                
+
         for r in list(self.__results['closed_ticket_age']):
             if r['_id']['owner'] in orgs_with_descendants:
                 self.__results['closed_ticket_age'].remove(r)
-                
+
         # Pull grouped ticket age data for orgs with descendants and add it to results
         for r in requests_with_descendants:
             descendants = self.__db.RequestDoc.get_all_descendants(r['_id'])
@@ -173,7 +173,7 @@ class ScorecardGenerator(object):
             self.__results['open_ticket_age'] += database.run_pipeline_cursor(pipeline_collection, self.__db)
             pipeline_collection = queries.closed_ticket_age_for_orgs_pl(self.__generated_time - timedelta(days=CLOSED_TICKETS_DAYS), r['_id'], descendants)
             self.__results['closed_ticket_age'] += database.run_pipeline_cursor(pipeline_collection, self.__db)
-    
+
     def __populate_scorecard_doc(self):
         # Go through each request doc and check if the org has a current tally doc
         for r in self.__requests:
@@ -208,11 +208,11 @@ class ScorecardGenerator(object):
                             elif i['_id']['severity'] == 3:
                                 severity = 'high'
                             elif i['_id']['severity'] == 4:
-                                severity = 'critical' 
+                                severity = 'critical'
                             score['open_tickets'][severity]['count'] = i['open_ticket_count']
                             score['open_tickets'][severity]['avg_days_open'] = avg_open_ticket_age.days + avg_open_ticket_age.seconds/(24*60*60.0)
                             score['open_tickets'][severity]['max_days_open'] = max_open_ticket_age.days + max_open_ticket_age.seconds/(24*60*60.0)
-                            
+
                     for i in self.__results['closed_ticket_age']:
                         if i['_id']['owner'] == score['owner']:  #Found some closed_ticket_age info for the current org
                             avg_closed_ticket_age = timedelta(milliseconds=i['avg_duration_to_close_msec'])
@@ -224,18 +224,18 @@ class ScorecardGenerator(object):
                             elif i['_id']['severity'] == 3:
                                 severity = 'high'
                             elif i['_id']['severity'] == 4:
-                                severity = 'critical' 
+                                severity = 'critical'
                             score['closed_tickets'][severity]['count'] = i['closed_ticket_count']
                             score['closed_tickets'][severity]['avg_days_to_close'] = avg_closed_ticket_age.days + avg_closed_ticket_age.seconds/(24*60*60.0)
                             score['closed_tickets'][severity]['max_days_to_close'] = max_closed_ticket_age.days + max_closed_ticket_age.seconds/(24*60*60.0)
-                    
+
                     self.__scorecard_doc['scores'].append(score)
                     break
             if currentlyScanned == False:
                 # Went through all tallies and didn't find a matching org for this request doc
                 score['risk_score'] = NOT_SCANNED_RISK_SCORE
-                self.__not_scanned_orgs.append(score)   # Add org/request to the not_scanned list   
-                self.__scorecard_doc['scores'].append(score)   
+                self.__not_scanned_orgs.append(score)   # Add org/request to the not_scanned list
+                self.__scorecard_doc['scores'].append(score)
 
     def __calc_risk_scores(self):
         for s in self.__scorecard_doc['scores']:
@@ -270,7 +270,7 @@ class ScorecardGenerator(object):
         SECOND = ['Agriculture', 'Art', 'Airport', 'Business', 'Commerce', 'Communication', 'Development', 'Economic', 'Education', 'Election', 'Energy', 'Environment', 'Finance', 'Gaming', 'Health', 'Housing', 'Infrastructure', 'Industrial', 'Insurance', 'Justice', 'Labor', 'Land', 'Maritime', 'Management', 'Natural Resources', 'Nuclear', 'Planning', 'Policy', 'Protection', 'Records', 'Resource', 'Regulatory', 'Retirement', 'Safety', 'Science', 'Security', 'Space', 'Trade', 'Transportation', 'Water']
         THIRD = ['Administration', 'Advisory Council', 'Agency', 'Authority', 'Bureau', 'Board', 'Center', 'Commission', 'Corporation', 'Corps', 'Council', 'Department', 'Enforcement', 'Foundation', 'Inquisition', 'Institute', 'Institutes', 'Laboratories', 'Office', 'Program', 'Regulatory Commission', 'Review Board', 'Service', 'Services', 'Trust']
         bad_acronyms = ['ASS']
-        
+
         acceptableName = False
         while not acceptableName:
             fakeName = random.choice(FIRST) + ' ' + random.choice(SECOND) + ' ' + random.choice(THIRD)
@@ -285,11 +285,11 @@ class ScorecardGenerator(object):
         realAgencyAcronyms = []
         fakeAgencyNames = []
         fakeAgencyAcronyms = []
-        
+
         for r in self.__requests:
             realAgencyNames.append(r['agency']['name'])
             realAgencyAcronyms.append(r['agency']['acronym'])
-        
+
         for s in self.__scorecard_doc['scores']:
             fakeAgencyName, fakeAgencyAcronym = self.__make_fake_agency(realAgencyNames, realAgencyAcronyms, fakeAgencyNames, fakeAgencyAcronyms)
             fakeAgencyNames.append(fakeAgencyName)
@@ -323,13 +323,13 @@ class ScorecardGenerator(object):
             self.__scorecard_doc['_id'] = ObjectId()
             self.__scorecard_doc['scoring_engine'] = SCORING_ENGINE_VERSION
             self.__scorecard_doc['generated_time'] = self.__generated_time
-        
+
             # access database and cache results
             self.__run_queries()
-        
+
             # build up the scorecard_doc from the query results
             self.__populate_scorecard_doc()
-        
+
             # anonymize data if requested
             if self.__anonymize:
                 self.__report_type = 'SAMPLE'
@@ -339,14 +339,14 @@ class ScorecardGenerator(object):
                 self.__report_type = 'Federal'
                 self.__calc_risk_scores()   # calculate risk score for each org in the scorecard_doc
                 self.__scorecard_doc.save() # Only save non-anonymized scorecards to the DB
-        
+
         # sort org lists
         self.__high_risk_orgs.sort(key=lambda x:x['acronym'])
         self.__medium_risk_orgs.sort(key=lambda x:x['acronym'])
         self.__low_risk_orgs.sort(key=lambda x:x['acronym'])
         self.__not_scanned_orgs.sort(key=lambda x:x['acronym'])
         self.__all_scanned_orgs.sort(key=lambda x:x['acronym'])
-        
+
         # round floats for output as integers
         for i in self.__all_scanned_orgs:
             for severity in ['critical', 'high', 'medium', 'low']:
@@ -358,7 +358,7 @@ class ScorecardGenerator(object):
                     i['closed_tickets'][severity]['avg_days_to_close'] = int(round(i['closed_tickets'][severity]['avg_days_to_close']))
                 if i['closed_tickets'][severity].get('max_days_to_close'):
                     i['closed_tickets'][severity]['max_days_to_close'] = int(round(i['closed_tickets'][severity]['max_days_to_close']))
-    
+
         # create a working directory
         original_working_dir = os.getcwdu()
         if self.__debug:
@@ -369,22 +369,22 @@ class ScorecardGenerator(object):
 
         # setup the working directory
         self.__setup_work_directory(temp_working_dir)
-                
+
         # generate attachments
         self.__generate_attachments()
 
         # generate json input to mustache
         self.__generate_mustache_json(REPORT_JSON)
-        
+
         # generate latex json + mustache
         self.__generate_latex(MUSTACHE_FILE, REPORT_JSON, REPORT_TEX)
 
         # generate report figures + latex
         self.__generate_final_pdf()
-            
+
         # revert working directory
         os.chdir(original_working_dir)
-        
+
         # copy report to original working directory
         # and delete working directory
         if not self.__debug:
@@ -396,17 +396,17 @@ class ScorecardGenerator(object):
                 dest_filename = 'cyhy_fed_scorecard-%s.pdf' % (timestamp)
             shutil.move(src_filename, dest_filename)
             shutil.rmtree(temp_working_dir)
-        
+
         return self.__results
-        
+
     def __setup_work_directory(self, work_dir):
         me = os.path.realpath(__file__)
         my_dir = os.path.dirname(me)
-        for n in (MUSTACHE_FILE, ):            
+        for n in (MUSTACHE_FILE, ):
             file_src = os.path.join(my_dir, n)
             file_dst = os.path.join(work_dir, n)
             shutil.copyfile(file_src, file_dst)
-        # copy static assets 
+        # copy static assets
         dir_src = os.path.join(my_dir, ASSETS_DIR_SRC)
         dir_dst = os.path.join(work_dir, ASSETS_DIR_DST)
         shutil.copytree(dir_src,dir_dst)
@@ -414,7 +414,7 @@ class ScorecardGenerator(object):
     ###############################################################################
     # Utilities
     ###############################################################################
-    
+
     def __anonymize_structure(self, data):
         if isinstance(data, basestring):
             return re.sub(IPV4_ADDRESS_RE, ANONYMOUS_IPV4, data)
@@ -433,10 +433,10 @@ class ScorecardGenerator(object):
                 return new_list
         else:
             return data
-    
+
     def __latex_escape(self, to_escape):
         return ''.join([LATEX_ESCAPE_MAP.get(i,i) for i in to_escape])
-               
+
     def __latex_escape_structure(self, data):
         '''assumes that all sequences contain dicts'''
         if isinstance(data, dict):
@@ -450,14 +450,14 @@ class ScorecardGenerator(object):
         elif isinstance(data, (list, tuple)):
             for i in data:
                 self.__latex_escape_structure(i)
-    
+
     def led(self, data):
         self.__latex_escape_dict(data)
-    
+
     def __convert_levels_to_text(self, data, field):
         for row in data:
             row[field] = SEVERITY_LEVELS[row[field]]
-            
+
     def __level_keys_to_text(self, data, lowercase=False):
         result = {}
         for k,v in data.items():
@@ -467,7 +467,7 @@ class ScorecardGenerator(object):
                 new_key = SEVERITY_LEVELS[k]
             result[new_key] = v
         return result
-            
+
     def __join_lists(self, data, field, joiner):
         for row in data:
             row[field] = joiner.join([str(i) for i in row[field]])
@@ -476,7 +476,7 @@ class ScorecardGenerator(object):
         for row in data:
             if np.isinf(row[field]):
                 row[field] = replacement
-                    
+
     def __dataframe_to_dicts(self, df, keep_index=False):
         df2 = df.reset_index().T.to_dict()
         result = df2.values()
@@ -484,14 +484,14 @@ class ScorecardGenerator(object):
             for i in result:
                 del(i['index'])
         return result
-    
+
     def __percent_change(self, previous, current):
         if previous == 0:
             return '-'
         change = 100 * current / previous - 100
         change = round(change, 1)
         return change
-                
+
     def __to_oxford_list(self, items, verb_single='', verb_muliple=''):
         if len(items) == 0:
             return None
@@ -500,7 +500,7 @@ class ScorecardGenerator(object):
         if len(items) == 2:
             return '%s and %s%s' % (items[0], items[-1], verb_muliple)
         return ', '.join(items[:-1]) + ', and ' + items[-1] + verb_muliple
-        
+
     def __udf_calc(self, preposition, v1, v2):
         if v2 > v1:
             return {'%s_up' % preposition : (v2-v1), '%s_up_flag' % preposition : True}
@@ -508,7 +508,7 @@ class ScorecardGenerator(object):
             return {'%s_down' % preposition : (v1-v2), '%s_down_flag' % preposition : True}
         assert v1 == v2, 'Glitch in the matrix!  Expected values to be equal.  Something has changed!'
         return {'%s_flat' % preposition : v1, '%s_flat_flag' % preposition : True}
-        
+
     def __best_scale(self, df):
         '''determine of a line chart scale should be log or linear'''
         de = df.describe().T
@@ -518,7 +518,7 @@ class ScorecardGenerator(object):
             return 'log'
         else:
             return 'linear'
-            
+
     def __brief(self, labels):
         '''shrink labels for a pie chart'''
         results = list()
@@ -526,21 +526,21 @@ class ScorecardGenerator(object):
             label = label.replace('_',' ').strip()
             results.append(' '.join(label.split()[:5]))
         return results
-    
+
     ###############################################################################
     #  Attachment Generation
     ###############################################################################
     def __generate_attachments(self):
         self.__generate_risk_ratings_attachment()
-        
+
     def __generate_risk_ratings_attachment(self):
         fields = ('acronym', 'name', 'cyber_exposure', 'open_critical_vulns', 'open_high_vulns', 'avg_days_to_close_critical_vulns', 'avg_days_to_close_high_vulns', 'max_days_to_close_critical_vulns', 'max_days_to_close_high_vulns', 'max_days_open_medium_vulns')
         with open('cyber-exposure-ratings.csv', 'wb') as out_file:
-            writer = csv.DictWriter(out_file, fields, extrasaction='ignore')
+            writer = csv.DictWriter(out_file, fields, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
             for i in self.__all_scanned_orgs:
                 writer.writerow( {'acronym':i.get('acronym'), 'name':i.get('name'), 'cyber_exposure':i.get('risk_score'), 'open_critical_vulns':i['open_tickets']['critical'].get('count'), 'open_high_vulns':i['open_tickets']['high'].get('count'), 'avg_days_to_close_critical_vulns':i['closed_tickets']['critical'].get('avg_days_to_close'), 'avg_days_to_close_high_vulns':i['closed_tickets']['high'].get('avg_days_to_close'), 'max_days_to_close_critical_vulns':i['closed_tickets']['critical'].get('max_days_to_close'), 'max_days_to_close_high_vulns':i['closed_tickets']['high'].get('max_days_to_close'), 'max_days_open_medium_vulns':i['open_tickets']['medium'].get('max_days_open') })
-    
+
     ###############################################################################
     # Final Document Generation and Assembly
     ###############################################################################
@@ -567,17 +567,17 @@ class ScorecardGenerator(object):
         result['report_type'] = self.__report_type
 
         if self.__title_date: # date for title page
-            result['title_date_tex'] = self.__title_date.strftime('{%d}{%m}{%Y}')  
+            result['title_date_tex'] = self.__title_date.strftime('{%d}{%m}{%Y}')
         else:
             result['title_date_tex'] = self.__generated_time.strftime('{%d}{%m}{%Y}')
-        
+
         # escape latex special characters in key lists
         for x in ('all_scanned_orgs_alpha', 'not_scanned_orgs'):
             self.__latex_escape_structure(result[x])
-                
+
         with open(filename, 'wb') as out:
             out.write(to_json(result))
-        
+
     def __generate_latex(self, mustache_file, json_file, latex_file):
         renderer = pystache.Renderer()
         template = codecs.open(mustache_file,'r', encoding='utf-8').read()
@@ -594,10 +594,10 @@ class ScorecardGenerator(object):
             output = sys.stdout
         else:
             output = open(os.devnull, 'w')
-        
-        return_code = subprocess.call(['xelatex','scorecard.tex'], stdout=output, stderr=subprocess.STDOUT) 
+
+        return_code = subprocess.call(['xelatex','scorecard.tex'], stdout=output, stderr=subprocess.STDOUT)
         assert return_code == 0, 'xelatex pass 1 of 2 return code was %s' % return_code
-        
+
         return_code = subprocess.call(['xelatex','scorecard.tex'], stdout=output, stderr=subprocess.STDOUT)
         assert return_code == 0, 'xelatex pass 2 of 2 return code was %s' % return_code
 
@@ -605,7 +605,7 @@ def warn_and_confirm(message):
     print >> sys.stderr, 'WARNING: %s' % message
     print >> sys.stderr
     yes = raw_input('Type "yes" if you are sure that you want to do this? ')
-    return yes == 'yes'          
+    return yes == 'yes'
 
 def print_scorecard_line(scorecard):
     scorecard_id = scorecard['_id']
@@ -617,7 +617,7 @@ def list_scorecards(db):
     for scorecard in cursor:
         print_scorecard_line(scorecard)
     return True
-    
+
 def delete_scorecard(db, scorecard_id):
     oid = ObjectId(scorecard_id)
     print 'Removing scorecard document...',
@@ -632,12 +632,12 @@ def main():
     args = docopt(__doc__, version='v0.0.1')
     db = database.db_from_config(args['--section'])
     success = False
-    
+
     if args['--previous']:
         scorecard_id = ObjectId(args['--previous'])
     else:
         scorecard_id = None
-    
+
     if args['--title-date']:
         title_date = dateutil.parser.parse(args['--title-date'])
     else:
@@ -646,16 +646,16 @@ def main():
     if args['list']:
         list_scorecards(db)
         sys.exit(0)
-        
+
     if args['delete']:
-        confirmed = warn_and_confirm('This will delete a scorecard document from the database.')    
+        confirmed = warn_and_confirm('This will delete a scorecard document from the database.')
         if confirmed:
             delete_scorecard(db, args['SCORECARD_ID'])
             sys.exit(0)
         else:
             print 'ABORTED!'
             sys.exit(-1)
-            
+
     if args['create']:
         print 'Generating scorecard...',
         generator = ScorecardGenerator(db, debug=args['--debug'], scorecard_id=scorecard_id,
@@ -663,6 +663,6 @@ def main():
         results = generator.generate_scorecard()
         print 'Done'
         sys.exit(0)
-        
+
 if __name__=='__main__':
     main()

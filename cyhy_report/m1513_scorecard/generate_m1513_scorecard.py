@@ -9,7 +9,7 @@ Usage:
 
 Options:
   -d --debug                     Keep intermediate files for debugging.
-  -h --help                      Show this screen.           
+  -h --help                      Show this screen.
   --version                      Show version.
   -s SECTION --section=SECTION   Configuration section to use.
 '''
@@ -35,9 +35,9 @@ import numpy as np
 
 # third-party libraries (install with pip)
 import pystache
-from pandas import Series, DataFrame 
+from pandas import Series, DataFrame
 import pandas as pd
-#import numpy as np 
+#import numpy as np
 from bson import ObjectId
 from docopt import docopt
 from pyPdf import PdfFileWriter, PdfFileReader
@@ -135,18 +135,18 @@ class ScorecardGenerator(object):
         self.__domain_count = all_domains_cursor.count()
 
         for domain_doc in all_domains_cursor:
-            self.__all_domains.append(domain_doc) 
+            self.__all_domains.append(domain_doc)
             if domain_doc['base_domain'] == domain_doc['domain']:
                 domain_doc['subdomains'] = list(self.__db.m1513.find({'base_domain': domain_doc['base_domain'], '_id': {'$ne': domain_doc['_id']}}).sort([('domain', 1)]))
                 self.__subdomain_count += len(domain_doc['subdomains'])
                 self.__base_domains.append(domain_doc)
-            
+
         # Get list of all second-level domains an agency owns
         second_cursor = self.__db.m1513.find({'agency': agency}).distinct('base_domain')
         for document in second_cursor:
-            self.__base_domain_count += 1      
+            self.__base_domain_count += 1
 
-    
+
     def __score_domain(self, domain):
         score = {'subdomain_scores' : list()}
         if domain['live'] == "True":
@@ -158,7 +158,7 @@ class ScorecardGenerator(object):
                 self.__all_eligible_domains_count += 1
 
             score['domain'] = domain['domain']
-            
+
             # strictly_forces_https
             if domain['strictly_forces_https'] == 'True':
                 score['strictly_forces_https'] = 'Yes'
@@ -172,48 +172,48 @@ class ScorecardGenerator(object):
             if domain['domain_supports_https'] == 'True':
                 score['domain_supports_https'] = 'Yes'
                 score['domain_supports_https_bool'] = True
-                self.__domain_supports_https_count += 1 
+                self.__domain_supports_https_count += 1
                 #print("Uses "+ score['domain'])  #debug 2
             else:
                 score['domain_supports_https'] = 'No'
-                score['domain_supports_https_bool'] = False   #print("valid no "+ score['domain'])  #debug 
+                score['domain_supports_https_bool'] = False   #print("valid no "+ score['domain'])  #debug
 
             # "Enforces HTTPS", domain_enforces_https
             if domain['domain_enforces_https'] == 'True':
                 score['domain_enforces_https'] = 'Yes'
                 score['domain_enforces_https_bool'] = True
-                self.__domain_enforces_https_count += 1 
+                self.__domain_enforces_https_count += 1
             else:
                 score['domain_enforces_https'] = 'No'
                 score['domain_enforces_https_bool'] = False
-       
-            # https_bad_chain    
+
+            # https_bad_chain
             if domain['https_bad_chain'] == 'True' and domain['https_bad_hostname'] == 'True':
                 score['https_bad_chain_bool'] = True
-                self.__https_bad_chain_count += 1 
+                self.__https_bad_chain_count += 1
             elif (domain['https_bad_chain'] == 'True' and domain['https_bad_hostname'] == 'False') or (domain['https_bad_chain'] == 'True' and domain['https_expired_cert'] == 'True'):
-                self.__https_bad_chain_count += 1                 
-                #self.__domain_supports_https_count += 1    
+                self.__https_bad_chain_count += 1
+                #self.__domain_supports_https_count += 1
                 print("valid no/bad chain "+ score['domain'])  #debug 1
             else:
                 score['https_bad_chain_bool'] = False
-            
 
-            # https_bad_hostname 
+
+            # https_bad_hostname
             if domain['https_bad_hostname'] == 'True':
                 score['https_bad_hostname_bool'] = True
                 self.__https_bad_hostname_count += 1
             else:
                 score['https_bad_hostname_bool'] = False
-            
+
 
             # https_expired_cert
             if domain['https_expired_cert'] == 'True':
                 score['https_expired_cert_bool'] = True
-                self.__https_expired_cert_count += 1 
+                self.__https_expired_cert_count += 1
             else:
                 score['https_expired_cert_bool'] = False
-            
+
 
             # live
             if domain['live'] == "True":
@@ -227,7 +227,7 @@ class ScorecardGenerator(object):
                 score['redirect_bool'] = True
             else:
                 score['redirect_bool'] = False
-            
+
 
             # downgrades_https
             if domain['downgrades_https'] == 'True':
@@ -243,7 +243,7 @@ class ScorecardGenerator(object):
             if domain['hsts'] == 'True':
                 score['hsts'] = 'Yes'
                 score['hsts_bool'] = True
-               
+
                # hsts_preloaded > hsts_preload_pending > hsts_preload_ready
                 if domain['hsts_preloaded'] == 'True':
                     score['hsts_preloaded'] = 'Yes'
@@ -251,7 +251,7 @@ class ScorecardGenerator(object):
                     self.__hsts_preloaded_count += 1
                 else:
                     score['hsts_preloaded_bool'] = False
-                    score['hsts_preloaded'] = 'No'          
+                    score['hsts_preloaded'] = 'No'
                     if domain['hsts_preload_pending'] == 'True':
                         score['hsts_preload_pending_bool'] = True
                     else:
@@ -264,7 +264,7 @@ class ScorecardGenerator(object):
                     else:
                         score['hsts_preload_ready_bool'] = False
                         score['hsts_preload_ready'] = 'No'
-            
+
                 if domain['domain_uses_strong_hsts'] == 'True':
                     score['domain_uses_strong_hsts_bool'] = True
                     self.__domain_uses_strong_hsts_count += 1
@@ -283,7 +283,7 @@ class ScorecardGenerator(object):
             if (domain['domain_supports_https'] == 'True' and domain['domain_enforces_https'] == 'True' and domain['domain_uses_strong_hsts'] == 'True'):
                 score['m1513_compliance'] = True
                 self.__m1513_count += 1
-            else: 
+            else:
                 score['m1513_compliance'] = False
 
             if domain.get('subdomains'):    # if this domain has any subdomains
@@ -292,14 +292,14 @@ class ScorecardGenerator(object):
                     if subdomain_score:
                         score['subdomain_scores'].append(subdomain_score)   # add this subdomain's score to this domain's list of subdomain_scores
             return score
-            
+
         else:   # if domain['live'] == "False", ddd to ineligible domain list if host not live
             if domain['domain'] == domain['base_domain']: # only include base domains in the ineligible count; otherwise lots of non-existent subs will show in the report
                 self.__ineligible_domains.append({'domain' : domain['domain']})
                 return None
 
-    
-    def __populate_scorecard_doc(self):        
+
+    def __populate_scorecard_doc(self):
         #index = 0
         self.__all_domains.sort(key=lambda x:x['domain'])   # sort list of all domains
         self.__base_domains.sort(key=lambda x:x['domain'])   # sort list of base domains
@@ -329,7 +329,7 @@ class ScorecardGenerator(object):
 
     def __latex_escape(self, to_escape):
         return ''.join([LATEX_ESCAPE_MAP.get(i,i) for i in to_escape])
-               
+
 
     def __latex_escape_structure(self, data):
         '''assumes that all sequences contain dicts'''
@@ -346,7 +346,7 @@ class ScorecardGenerator(object):
                 self.__latex_escape_structure(i)
 
 
-    def generate_m1513_scorecard(self):  
+    def generate_m1513_scorecard(self):
         print ' parsing data'
         # build up the scorecard_doc from the query results
         self.__populate_scorecard_doc()
@@ -357,7 +357,7 @@ class ScorecardGenerator(object):
             self.__https_compliance_list.sort(key=lambda x:x['domain'])
         if self.__non_https_compliance_list:
             self.__non_https_compliance_list.sort(key=lambda x:x['domain'])
-        
+
         # create a working directory
         original_working_dir = os.getcwdu()
         if self.__debug:
@@ -368,28 +368,28 @@ class ScorecardGenerator(object):
 
         # setup the working directory
         self.__setup_work_directory(temp_working_dir)
-        
-        print ' generating attachments'   
+
+        print ' generating attachments'
         # generate attachments
         self.__generate_attachments()
 
-        print ' generating charts'   
+        print ' generating charts'
         # generate charts
         self.__generate_charts()
 
         # generate json input to mustache
         self.__generate_mustache_json(REPORT_JSON)
-        
+
         # generate latex json + mustache
         self.__generate_latex(MUSTACHE_FILE, REPORT_JSON, REPORT_TEX)
 
-        print ' assembling PDF'  
+        print ' assembling PDF'
         # generate report figures + latex
         self.__generate_final_pdf()
-            
+
         # revert working directory
         os.chdir(original_working_dir)
-        
+
         # copy report and json file to original working directory
         # and delete working directory
         if not self.__debug:
@@ -403,15 +403,15 @@ class ScorecardGenerator(object):
             #shutil.move(src_filename, dest_filename)
             #shutil.rmtree(temp_working_dir)
         return self.__results
-        
+
     def __setup_work_directory(self, work_dir):
         me = os.path.realpath(__file__)
         my_dir = os.path.dirname(me)
-        for n in (MUSTACHE_FILE, PDF_CAPTURE_JS):            
+        for n in (MUSTACHE_FILE, PDF_CAPTURE_JS):
             file_src = os.path.join(my_dir, n)
             file_dst = os.path.join(work_dir, n)
             shutil.copyfile(file_src, file_dst)
-        # copy static assets 
+        # copy static assets
         dir_src = os.path.join(my_dir, ASSETS_DIR_SRC)
         dir_dst = os.path.join(work_dir, ASSETS_DIR_DST)
         shutil.copytree(dir_src,dir_dst)
@@ -421,17 +421,17 @@ class ScorecardGenerator(object):
     ###############################################################################
     def __generate_attachments(self):
         self.__generate_https_attachment()
-        bashCommand = "bash /home/report/exporting_agency.sh " + '"' + self.__agency + '"' 
+        bashCommand = "bash /home/report/exporting_agency.sh " + '"' + self.__agency + '"'
         os.system(bashCommand)
-        
+
 
     def __generate_https_attachment(self):
         generated_date_txt = self.__generated_time.strftime('%Y-%m-%d')
         header_fields = ('Agency', 'Registered Domains', 'Found Subdomains', 'Web-responsive Domains', 'Uses HTTPS', 'Enforces HTTPS', 'HSTS', 'Preloaded', 'M-15-13 Compliant Domains')
         data_fields = ('Agency', 'Registered Domains', 'Found Subdomains', 'Web-responsive Domains', 'Uses HTTPS', 'Enforces HTTPS', 'HSTS', 'Preloaded', 'M-15-13 Compliant Domains')
         with open('totals.csv', 'wb') as out_file:
-            header_writer = csv.DictWriter(out_file, header_fields, extrasaction='ignore')
-            data_writer = csv.DictWriter(out_file, data_fields, extrasaction='ignore')
+            header_writer = csv.DictWriter(out_file, header_fields, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
+            data_writer = csv.DictWriter(out_file, data_fields, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
             header_writer.writeheader()
             data_writer.writerow({'Agency':self.__agency, 'Registered Domains':self.__base_domain_count, 'Found Subdomains':self.__subdomain_count, 'Web-responsive Domains':self.__all_eligible_domains_count, 'Uses HTTPS':self.__domain_supports_https_count, 'Enforces HTTPS':self.__strictly_forces_count, 'HSTS':self.__hsts_count, 'Preloaded':self.__hsts_preloaded_count, 'M-15-13 Compliant Domains':self.__m1513_count})
 
@@ -455,7 +455,7 @@ class ScorecardGenerator(object):
         p1 = plt.bar(ind, Perct, width, color="#0058A1", edgecolor="none") #dhs blue
         p2 = plt.bar(ind, Diff, width, color='w',
                  bottom=Perct, edgecolor="none")
-    
+
         plt.ylabel('Percent (%)', fontsize=14, style='italic')
         plt.title('M-15-13 Components', fontsize=20, fontweight='bold')
         plt.xticks(ind + width/2., ('Uses HTTPS', 'Enforces HTTPS', 'Uses HSTS'), fontsize=14, style='italic')
@@ -481,7 +481,7 @@ class ScorecardGenerator(object):
         colors = ['white', "#0058A1"] #dhs blue
 
         plt.pie(sizes, labels=labels, colors=colors, shadow=False, startangle=90) #autopct='%1.1f%%'
-        
+
         #draw a circle at the center of pie to make it look like a donut
         centre_circle = plt.Circle((0,0),0.75,color='black', fc='white',linewidth=1.25)
         fig = plt.gcf()
@@ -496,7 +496,7 @@ class ScorecardGenerator(object):
         #plt.show()
         plt.savefig(self.__path + '/overall-compliance')#bbox_inches='tight',pad_inches=0
         plt.close()
-    
+
     ###############################################################################
     # Final Document Generation and Assembly
     ###############################################################################
@@ -504,7 +504,7 @@ class ScorecardGenerator(object):
         #result = {'all_domains':self.__all_domains}
         result = {'scorecard_doc':self.__scorecard_doc}
         result['ineligible_domains'] = self.__ineligible_domains
-        result['domain_count'] = int(self.__domain_count) 
+        result['domain_count'] = int(self.__domain_count)
         result['subdomain_count'] = int(self.__subdomain_count)
         result['base_domain_count'] = int(self.__base_domain_count)
         result['eligible_domains_count'] = self.__eligible_domains_count
@@ -528,18 +528,18 @@ class ScorecardGenerator(object):
         result['hsts_count'] = int(self.__hsts_count)
         result['hsts_preloaded_count'] = int(self.__hsts_preloaded_count)
         result['hsts_preload_ready_count'] = int(self.__hsts_preload_ready_count)
-        result['domain_uses_strong_hsts_count'] = int(self.__domain_uses_strong_hsts_count)        
+        result['domain_uses_strong_hsts_count'] = int(self.__domain_uses_strong_hsts_count)
         result['https_expired_cert_count'] = int(self.__https_expired_cert_count)
         result['https_bad_hostname_count'] = int(self.__https_bad_hostname_count)
         result['https_bad_chain_count'] = int(self.__https_bad_chain_count)
         result['path'] = self.__path
         result['hsts_low_max_age_count'] = self.__hsts_low_max_age_count
-        
+
         self.__latex_escape_structure   (result['scorecard_doc'])
 
         with open(filename, 'wb') as out:
             out.write(to_json(result))
-      
+
 
     def __generate_latex(self, mustache_file, json_file, latex_file):
         renderer = pystache.Renderer()
@@ -558,16 +558,16 @@ class ScorecardGenerator(object):
             output = sys.stdout
         else:
             output = open(os.devnull, 'w')
-        
-        return_code = subprocess.call(['xelatex', REPORT_TEX], stdout=output, stderr=subprocess.STDOUT) 
-        assert return_code == 0, 'xelatex pass 1 of 2 return code was %s' % return_code
-        
+
         return_code = subprocess.call(['xelatex', REPORT_TEX], stdout=output, stderr=subprocess.STDOUT)
-        assert return_code == 0, 'xelatex pass 2 of 2 return code was %s' % return_code       
+        assert return_code == 0, 'xelatex pass 1 of 2 return code was %s' % return_code
+
+        return_code = subprocess.call(['xelatex', REPORT_TEX], stdout=output, stderr=subprocess.STDOUT)
+        assert return_code == 0, 'xelatex pass 2 of 2 return code was %s' % return_code
 
 
 # connection to database
-#def db_connection(uri): 
+#def db_connection(uri):
 #    con = MongoClient(host='db', tz_aware=True)
 #    db = con.m1513
 #    return db
@@ -578,13 +578,13 @@ def main():
     #db = db_connection(database.db_from_config(args['--section']))
     con = MongoClient(host='db', tz_aware=True)
     db = con.m1513
-     
+
     print 'Generating HTTPS Scorecard...'
     generator = ScorecardGenerator(db, args['"AGENCY"'], debug=args['--debug'])
     results = generator.generate_m1513_scorecard()
     print 'Done'
     sys.exit(0)
 
-        
+
 if __name__=='__main__':
     main()

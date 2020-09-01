@@ -2235,7 +2235,7 @@ class ScorecardGenerator(object):
 
         # Get list of 'CFO Act' orgs
         if self.__cyhy_db.RequestDoc.find_one({'_id': 'FED_CFO_ACT'}):
-            self.__cfo_act_orgs = self.__cyhy_db.RequestDoc.find_one({'_id': 'FED_CFO_ACT'})['children'] 
+            self.__cfo_act_orgs = self.__cyhy_db.RequestDoc.find_one({'_id': 'FED_CFO_ACT'})['children']
         else:
             self.__cfo_act_orgs = []
 
@@ -2947,8 +2947,8 @@ class ScorecardGenerator(object):
         header_fields = ('acronym', 'name', 'cfo_act', 'unexpired_certificates', 'new_certificates_current_fiscal_year', 'new_certificates_past_30_days', 'new_certificates_past_7_days')
         data_fields = ('acronym', 'name', 'cfo_act_org', 'unexpired_certs_count', 'certs_issued_current_fy_count', 'certs_issued_past_30_days_count', 'certs_issued_past_7_days_count')
         with open(ED1901_RESULTS_BY_AGENCY_CSV_FILE, 'wb') as out_file:
-            header_writer = csv.DictWriter(out_file, header_fields, extrasaction='ignore')
-            data_writer = csv.DictWriter(out_file, data_fields, extrasaction='ignore')
+            header_writer = csv.DictWriter(out_file, header_fields, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
+            data_writer = csv.DictWriter(out_file, data_fields, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
             header_writer.writeheader()
             for org in copy.deepcopy(self.__scorecard_doc['scores']):
                 for cert_scan_key in ('unexpired_certs_count', 'certs_issued_current_fy_count', 'certs_issued_past_30_days_count', 'certs_issued_past_7_days_count'):
@@ -2998,9 +2998,9 @@ class ScorecardGenerator(object):
 
         with open(BOD_RESULTS_BY_AGENCY_CSV_FILE, 'wb') as out_file:
             header_writer = csv.DictWriter(out_file, header_fields,
-                                           extrasaction='ignore')
+                                           extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
             data_writer = csv.DictWriter(out_file, data_fields,
-                                         extrasaction='ignore')
+                                         extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
             header_writer.writeheader()
             for org in copy.deepcopy(self.__scorecard_doc['scores']):
                 if org['vuln-scan']['scanned']:
@@ -3075,9 +3075,9 @@ class ScorecardGenerator(object):
 
         with open(BOD_1902_RESULTS_BY_AGENCY_CSV_FILE, 'wb') as out_file:
             header_writer = csv.DictWriter(out_file, header_fields,
-                                           extrasaction='ignore')
+                                           extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
             data_writer = csv.DictWriter(out_file, data_fields,
-                                         extrasaction='ignore')
+                                         extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
             header_writer.writeheader()
             for org in copy.deepcopy(self.__scorecard_doc['scores']):
                 if org['vuln-scan']['scanned']:
@@ -3121,8 +3121,8 @@ class ScorecardGenerator(object):
         header_fields = ('acronym', 'name', 'cfo_act', 'http_responsive_hosts', 'uses_https', 'uses_https_%', 'enforces_https', 'enforces_https_%', 'uses_strong_hsts', 'uses_strong_hsts_%', 'free_of_sslv2/v3,3des,rc4', 'free_of_sslv2/v3,3des,rc4_%', 'bod_18-01_web_compliant', 'bod_18-01_web_compliant_%')
         data_fields = ('acronym', 'name', 'cfo_act_org', 'live_domain_count', 'live_supports_https_count', 'live_supports_https_pct', 'live_enforces_https_count', 'live_enforces_https_pct', 'live_uses_strong_hsts_count', 'live_uses_strong_hsts_pct', 'live_no_weak_crypto_count', 'live_no_weak_crypto_pct', 'live_bod1801_web_compliant_count', 'live_bod1801_web_compliant_pct')
         with open(WEB_SECURITY_RESULTS_BY_AGENCY_CSV_FILE, 'wb') as out_file:
-            header_writer = csv.DictWriter(out_file, header_fields, extrasaction='ignore')
-            data_writer = csv.DictWriter(out_file, data_fields, extrasaction='ignore')
+            header_writer = csv.DictWriter(out_file, header_fields, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
+            data_writer = csv.DictWriter(out_file, data_fields, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
             header_writer.writeheader()
             for org in copy.deepcopy(self.__scorecard_doc['scores']):
                 for https_scan_key in ('live_domain_count', 'live_supports_https_count', 'live_supports_https_pct', 'live_enforces_https_count', 'live_enforces_https_pct', 'live_uses_strong_hsts_count', 'live_uses_strong_hsts_pct', 'live_no_weak_crypto_count', 'live_no_weak_crypto_pct', 'live_bod1801_web_compliant_count', 'live_bod1801_web_compliant_pct'):
@@ -3136,8 +3136,8 @@ class ScorecardGenerator(object):
         header_fields = ('acronym', 'name', 'cfo_act', 'live_domains_and_smtp_subdomains', 'valid_dmarc_record', 'valid_dmarc_record_%', 'dmarc_policy_of_reject', 'dmarc_policy_of_reject_%', 'reports_dmarc_to_cisa', 'reports_dmarc_to_cisa_%', 'supports_starttls', 'supports_starttls_%', 'has_spf_covered', 'has_spf_covered_%', 'free_of_sslv2/v3,3des,rc4', 'free_of_sslv2/v3,3des,rc4_%', 'bod_18-01_email_compliant', 'bod_18-01_email_compliant_%', '3des_exception')
         data_fields = ('acronym', 'name', 'cfo_act_org', 'live_domain_count', 'live_valid_dmarc_count', 'live_valid_dmarc_pct', 'live_dmarc_reject_count', 'live_dmarc_reject_pct', 'live_has_bod1801_dmarc_uri_count', 'live_has_bod1801_dmarc_uri_pct', 'live_supports_starttls_count', 'live_supports_starttls_pct', 'live_spf_covered_count', 'live_spf_covered_pct', 'live_no_weak_crypto_count', 'live_no_weak_crypto_pct', 'live_bod1801_email_compliant_count', 'live_bod1801_email_compliant_pct', '3des_exception')
         with open(EMAIL_SECURITY_RESULTS_BY_AGENCY_CSV_FILE, 'wb') as out_file:
-            header_writer = csv.DictWriter(out_file, header_fields, extrasaction='ignore')
-            data_writer = csv.DictWriter(out_file, data_fields, extrasaction='ignore')
+            header_writer = csv.DictWriter(out_file, header_fields, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
+            data_writer = csv.DictWriter(out_file, data_fields, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
             header_writer.writeheader()
             for org in copy.deepcopy(self.__scorecard_doc['scores']):
                 for trustymail_key in ('live_domain_count', 'live_valid_dmarc_count', 'live_valid_dmarc_pct', 'live_dmarc_reject_count', 'live_dmarc_reject_pct', 'live_has_bod1801_dmarc_uri_count', 'live_has_bod1801_dmarc_uri_pct', 'live_supports_starttls_count', 'live_supports_starttls_pct', 'live_spf_covered_count', 'live_spf_covered_pct', 'live_no_weak_crypto_count', 'live_no_weak_crypto_pct', 'live_bod1801_email_compliant_count', 'live_bod1801_email_compliant_pct'):

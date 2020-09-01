@@ -468,10 +468,10 @@ class NotificationGenerator(object):
 
         with open(VULNERABILITY_FINDINGS_CSV_FILE, "wb") as out_file:
             header_writer = csv.DictWriter(
-                out_file, header_fields, extrasaction="ignore"
+                out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
             )
             header_writer.writeheader()
-            data_writer = csv.DictWriter(out_file, data_fields, extrasaction="ignore")
+            data_writer = csv.DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
             for ticket in self.__results["tickets"]:
                 if ticket["based_on_vulnscan"]:
                     data_writer.writerow(ticket)
@@ -508,10 +508,10 @@ class NotificationGenerator(object):
 
         with open(RISKY_SERVICES_CSV_FILE, "wb") as out_file:
             header_writer = csv.DictWriter(
-                out_file, header_fields, extrasaction="ignore"
+                out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
             )
             header_writer.writeheader()
-            data_writer = csv.DictWriter(out_file, data_fields, extrasaction="ignore")
+            data_writer = csv.DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
             for ticket in self.__results["tickets"]:
                 if ticket["based_on_portscan"]:
                     data_writer.writerow(ticket)
