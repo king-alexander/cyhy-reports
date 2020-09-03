@@ -887,7 +887,7 @@ class ReportGenerator(object):
                         "trimmed_subjects": {
                             "$in": self.__results["second_level_domains"]
                         },
-                        "not_after": {"$gte": thirty_days_ago,},
+                        "not_after": {"$gte": thirty_days_ago},
                     }
                 )
             )
@@ -2031,7 +2031,8 @@ class ReportGenerator(object):
         s_new = counts_1.reindex_like(counts_0)
         s_new = s_new[np.isnan(s_new)]
         if len(s_new) == 0:
-            index_natives = None  # DataFrame interprets [] as (0,0) dimensions which will conflict with columns
+            # DataFrame interprets [] as (0,0) dimensions which will conflict with columns
+            index_natives = None
         else:
             index_natives = s_new.index.tolist()
         df_new = DataFrame(
@@ -2061,7 +2062,8 @@ class ReportGenerator(object):
         s_resolved = counts_0.reindex_like(counts_1)
         s_resolved = s_resolved[np.isnan(s_resolved)]
         if len(s_resolved) == 0:
-            index_natives = None  # DataFrame interprets [] as (0,0) dimensions which will conflict with columns
+            # DataFrame interprets [] as (0,0) dimensions which will conflict with columns
+            index_natives = None
         else:
             index_natives = s_resolved.index.tolist()
         df_resolved = DataFrame(
@@ -2080,12 +2082,10 @@ class ReportGenerator(object):
         )
 
         # Handle (hopefully rare) case where vulns are resolved (according to snapshot), but have since re-opened, so time_closed is None
-        no_time_closed_mask = (
-            df_resolved["time_closed"] != NULL_TIMESTAMP
-        )  # Mask for NULL_TIMESTAMP values set by fillna above
-        df_resolved["time_closed"].where(
-            no_time_closed_mask, None, inplace=True
-        )  # NULL_TIMESTAMPs changed back to NaT (Not a Time)
+        # Mask for NULL_TIMESTAMP values set by fillna above
+        no_time_closed_mask = df_resolved["time_closed"] != NULL_TIMESTAMP
+        # NULL_TIMESTAMPs changed back to NaT (Not a Time)
+        df_resolved["time_closed"].where(no_time_closed_mask, None, inplace=True)
         df_resolved.sort_values(
             by=["severity", "plugin_name"], ascending=[False, True], inplace=True
         )
@@ -2100,9 +2100,8 @@ class ReportGenerator(object):
         # Calculate New Vulnerability Counts
         new_counts = Series([0, 0, 0, 0])
         if len(df_new):
-            new_counts = df_new.groupby(
-                "severity"
-            ).size()  # get counts of each severity
+            # get counts of each severity
+            new_counts = df_new.groupby("severity").size()
         new_counts = new_counts.reindex_axis([4, 3, 2, 1]).fillna(0)
         new_counts = new_counts.apply(np.int)
         d_new_counts = new_counts.to_dict()
@@ -2111,9 +2110,8 @@ class ReportGenerator(object):
         # Calculate Resolved Vulnerability Counts
         resolved_counts = Series([0, 0, 0, 0])
         if len(df_resolved):
-            resolved_counts = df_resolved.groupby(
-                "severity"
-            ).size()  # get counts of each severity
+            # get counts of each severity
+            resolved_counts = df_resolved.groupby("severity").size()
         resolved_counts = resolved_counts.reindex_axis([4, 3, 2, 1]).fillna(0)
         resolved_counts = resolved_counts.apply(np.int)
         d_resolved_counts = resolved_counts.to_dict()
@@ -2131,15 +2129,17 @@ class ReportGenerator(object):
         self.__results["brand_new_vulnerabilities"] = list()
         self.__results["redetected_vulnerabilities"] = list()
         if self.__no_history:
+            # Everything must be "brand new" in this case
             self.__results["brand_new_vulnerabilities"] = self.__results[
                 "new_vulnerabilities"
-            ]  # Everything must be "brand new" in this case
+            ]
         else:
             for t in self.__results["new_vulnerabilities"]:
                 # Only "brand new" if opened after the previous snapshot end_time
+                # Explicitly set time zone to UTC
                 if t["time_opened"] > self.__snapshots[1]["end_time"].replace(
                     tzinfo=tz.tzutc()
-                ):  # Explicitly set time zone to UTC
+                ):
                     self.__results["brand_new_vulnerabilities"].append(t)
                 else:
                     self.__results["redetected_vulnerabilities"].append(t)
@@ -2294,7 +2294,9 @@ class ReportGenerator(object):
                 # unknown field appears it indicates an error
                 # (probably a typo).  That's why we're using
                 # extrasaction='raise' here.
-                writer = DictWriter(f, fields, extrasaction="raise",  quoting=csv.QUOTE_MINIMAL)
+                writer = DictWriter(
+                    f, fields, extrasaction="raise", quoting=csv.QUOTE_MINIMAL
+                )
                 writer.writeheader()
                 for d in data:
                     not_after = d["not_after"].replace(tzinfo=today.tzinfo)
@@ -2450,9 +2452,16 @@ class ReportGenerator(object):
                 )
         data = self.__results["tickets_0"]
         with open("findings.csv", "wb") as out_file:
-            header_writer = DictWriter(out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            header_writer = DictWriter(
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
+            )
             header_writer.writeheader()
-            data_writer = DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            data_writer = DictWriter(
+                out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             for row in data:
                 data_writer.writerow(row)
 
@@ -2499,9 +2508,16 @@ class ReportGenerator(object):
             )
         data = self.__results["resolved_vulnerabilities"]
         with open("mitigated-vulnerabilities.csv", "wb") as out_file:
-            header_writer = DictWriter(out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            header_writer = DictWriter(
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
+            )
             header_writer.writeheader()
-            data_writer = DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            data_writer = DictWriter(
+                out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             for row in data:
                 # If enough time has passed between snapshot creation and report generation,
                 # we may see tickets that were closed when the snapshot was created, but
@@ -2563,9 +2579,16 @@ class ReportGenerator(object):
             )
         data = self.__results["recently_detected_closed_tickets"]
         with open("recently-detected.csv", "wb") as out_file:
-            header_writer = DictWriter(out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            header_writer = DictWriter(
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
+            )
             header_writer.writeheader()
-            data_writer = DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            data_writer = DictWriter(
+                out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             for row in data:
                 data_writer.writerow(row)
 
@@ -2580,7 +2603,9 @@ class ReportGenerator(object):
                 fields = ("ip_int", "ip", "port", "service")
         data = self.__results["services_attachment"]
         with open("services.csv", "wb") as out_file:
-            writer = DictWriter(out_file, fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            writer = DictWriter(
+                out_file, fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             writer.writeheader()
             for row in data:
                 writer.writerow(row)
@@ -2617,7 +2642,9 @@ class ReportGenerator(object):
                 )
         data = self.__results["risky_services_tickets"]
         with open("potentially-risky-services.csv", "wb") as out_file:
-            writer = DictWriter(out_file, fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            writer = DictWriter(
+                out_file, fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             writer.writeheader()
             for row in data:
                 writer.writerow(row)
@@ -2636,8 +2663,15 @@ class ReportGenerator(object):
                 data_fields = ("ip_int", "ip", "name", "hostname")
         data = self.__results["hosts_attachment"]
         with open("hosts.csv", "wb") as out_file:
-            header_writer = DictWriter(out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
-            data_writer = DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            header_writer = DictWriter(
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
+            )
+            data_writer = DictWriter(
+                out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             header_writer.writeheader()
             for row in data:
                 data_writer.writerow(row)
@@ -2652,7 +2686,12 @@ class ReportGenerator(object):
             header_fields = ("cidr", "first", "last", "count")
         data = self.__snapshots[0]["networks"]
         with open("scope.csv", "wb") as out_file:
-            writer = DictWriter(out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            writer = DictWriter(
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
+            )
             writer.writeheader()
             for net in data:
                 if self.__anonymize:
@@ -2760,9 +2799,16 @@ class ReportGenerator(object):
                 )
         data = self.__results["false_positive_tickets"]
         with open("false-positive-findings.csv", "wb") as out_file:
-            header_writer = DictWriter(out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            header_writer = DictWriter(
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
+            )
             header_writer.writeheader()
-            data_writer = DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            data_writer = DictWriter(
+                out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             for row in data:
                 data_writer.writerow(row)
 
@@ -2814,10 +2860,18 @@ class ReportGenerator(object):
             )
             with open("sub-org-summary.csv", "wb") as out_file:
                 header_writer = DictWriter(
-                    out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+                    out_file,
+                    header_fields,
+                    extrasaction="ignore",
+                    quoting=csv.QUOTE_MINIMAL,
                 )
                 header_writer.writeheader()
-                data_writer = DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+                data_writer = DictWriter(
+                    out_file,
+                    data_fields,
+                    extrasaction="ignore",
+                    quoting=csv.QUOTE_MINIMAL,
+                )
                 # Output data from descendant orgs
                 for row in self.__results["ss0_descendant_data"]:
                     for severity in ("critical", "high", "medium", "low"):
@@ -2879,9 +2933,16 @@ class ReportGenerator(object):
             "tix_closed_after_date",
         )
         with open("days-to-mitigate.csv", "wb") as out_file:
-            header_writer = DictWriter(out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            header_writer = DictWriter(
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
+            )
             header_writer.writeheader()
-            data_writer = DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            data_writer = DictWriter(
+                out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             for snap in self.__snapshots:
                 snap["report_date"] = snap["tix_msec_open"][
                     "tix_open_as_of_date"
@@ -2922,9 +2983,16 @@ class ReportGenerator(object):
             "tix_days_open.low.max",
         )
         with open("days-currently-active.csv", "wb") as out_file:
-            header_writer = DictWriter(out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            header_writer = DictWriter(
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
+            )
             header_writer.writeheader()
-            data_writer = DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            data_writer = DictWriter(
+                out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             for snap in self.__snapshots:
                 snap["report_date"] = snap["tix_msec_open"][
                     "tix_open_as_of_date"
@@ -3264,9 +3332,8 @@ class ReportGenerator(object):
         if self.__log_report_to_db:
             result["report_oid"] = str(self.__report_oid)
         else:
-            result[
-                "report_oid"
-            ] = None  # If report_oid is None, it will not be included in the PDF metadata
+            # If report_oid is None, it will not be included in the PDF metadata
+            result["report_oid"] = None
 
         # escape latex special characters in all values and convert any instances of CVE IDs into hyperlinks to the NVD (NIST)
         self.__latex_escape_structure_make_cve_urls(result)
@@ -3414,7 +3481,9 @@ def main():
         print "Generating overview CSV ...",
         fields = overview_data[0].keys()
         with open(args["--overview"], "w") as csv_out:
-            csv_writer = DictWriter(csv_out, fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            csv_writer = DictWriter(
+                csv_out, fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             csv_writer.writeheader()
             for row in overview_data:
                 csv_writer.writerow(row)
