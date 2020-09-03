@@ -138,7 +138,8 @@ class NotificationGenerator(object):
         """Construct a NotificationGenerator."""
         self.__cyhy_db = cyhy_db
         self.__owner = owner
-        self.__results = None  # reusable query results
+        # reusable query results
+        self.__results = None
         self.__debug = debug
         self.__draft = not final
         self.__anonymize = anonymize
@@ -286,7 +287,7 @@ class NotificationGenerator(object):
                 try:
                     latest_vuln = ticket.latest_vuln()
                 except database.VulnScanNotFoundException as e:
-                    print("\n  Warning (non-fatal): {}".format(e.message))
+                    print ("\n  Warning (non-fatal): {}".format(e.message))
                     # The vuln_scan has likely been archived; get the vuln_scan
                     #  _id and time from the VulnScanNotFoundException and set
                     # description and solution to 'Not available'
@@ -305,13 +306,10 @@ class NotificationGenerator(object):
                 try:
                     latest_port = ticket.latest_port()
                 except database.PortScanNotFoundException as e:
-                    print("\n  Warning (non-fatal): {}".format(e.message))
+                    print ("\n  Warning (non-fatal): {}".format(e.message))
                     # The port_scan has likely been archived; get the port_scan
                     #  _id and time from the PortScanNotFoundException
-                    latest_port = {
-                        "_id": e.port_scan_id,
-                        "time": e.port_scan_time,
-                    }
+                    latest_port = {"_id": e.port_scan_id, "time": e.port_scan_time}
                 # Copy latest detection time to ticket and rename 'last_detected'
                 ticket["last_detected"] = latest_port["time"]
                 # Assign the category for this service
@@ -404,7 +402,8 @@ class NotificationGenerator(object):
         """
         if isinstance(data, dict):
             for k, v in data.items():
-                if k.endswith("_tex"):  # Skip special tex values
+                # Skip special tex values
+                if k.endswith("_tex"):
                     continue
                 if isinstance(v, basestring):
                     data[k] = self.__latex_escape(v)
@@ -468,10 +467,15 @@ class NotificationGenerator(object):
 
         with open(VULNERABILITY_FINDINGS_CSV_FILE, "wb") as out_file:
             header_writer = csv.DictWriter(
-                out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
             )
             header_writer.writeheader()
-            data_writer = csv.DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            data_writer = csv.DictWriter(
+                out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             for ticket in self.__results["tickets"]:
                 if ticket["based_on_vulnscan"]:
                     data_writer.writerow(ticket)
@@ -508,10 +512,15 @@ class NotificationGenerator(object):
 
         with open(RISKY_SERVICES_CSV_FILE, "wb") as out_file:
             header_writer = csv.DictWriter(
-                out_file, header_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+                out_file,
+                header_fields,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL,
             )
             header_writer.writeheader()
-            data_writer = csv.DictWriter(out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
+            data_writer = csv.DictWriter(
+                out_file, data_fields, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL
+            )
             for ticket in self.__results["tickets"]:
                 if ticket["based_on_portscan"]:
                     data_writer.writerow(ticket)
@@ -607,7 +616,8 @@ class NotificationGenerator(object):
         # Metadata copy hack see:
         # http://stackoverflow.com/questions/2574676/change-metadata-of-pdf-file-with-pypdf
         metadata = pdf_reader.getDocumentInfo()
-        pdf_writer._info.getObject().update(metadata)  # Copy metadata to dest
+        # Copy metadata to dest
+        pdf_writer._info.getObject().update(metadata)
 
         for i in xrange(pdf_reader.getNumPages()):
             pdf_writer.addPage(pdf_reader.getPage(i))
@@ -642,9 +652,9 @@ def main():
             report_key = None
 
         if args["--anonymize"]:
-            print("Generating anonymized notification based on {} ...".format(owner)),
+            print ("Generating anonymized notification based on {} ...".format(owner)),
         else:
-            print("Generating notification for {} ...".format(owner)),
+            print ("Generating notification for {} ...".format(owner)),
         generator = NotificationGenerator(
             cyhy_db,
             owner,
@@ -658,11 +668,11 @@ def main():
         if results:
             if len(results["notifications"]) > 0:
                 if was_encrypted:
-                    print("Done (encrypted)")
+                    print ("Done (encrypted)")
                 else:
-                    print("Done")
+                    print ("Done")
             else:
-                print("No notifications found, no PDF created!")
+                print ("No notifications found, no PDF created!")
 
         # import IPython
         # IPython.embed()  # <<< BREAKPOINT >>>
